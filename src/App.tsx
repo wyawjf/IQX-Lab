@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence, useSpring, useMotionValue } from "motion/react";
 import { 
-  Layers, Briefcase, Play, PenTool, 
-  Terminal, Activity, Zap, Cpu, Server, Network, FileText, MessageSquare, Copy, Check, Target
+  Layers, Briefcase, Play,
+  Activity, Zap, FileText, MessageSquare, Copy, Check, Target, ChevronRight, AlertTriangle, Sparkles, Terminal, Code, ArrowRight
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -11,536 +11,450 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const AtmosphericBackground = () => (
-  <div className="fixed inset-0 pointer-events-none z-[-1] bg-[#030303] overflow-hidden">
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_rgba(255,78,0,0.08)_0%,_transparent_50%)] blur-[100px]" />
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,_rgba(255,255,255,0.03)_0%,_transparent_50%)] blur-[100px]" />
-    <div 
-      className="absolute inset-0 opacity-[0.03]"
-      style={{
-        backgroundImage: "url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPjxyZWN0IHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')"
-      }}
+// ==========================================
+// MOCK DATA
+// ==========================================
+const GUIDED_DATA = [
+  { key: 'role', title: '切入职场角色', options: ['产品/业务负责人', 'AI 研发/架构师', '商业化/增长黑客', '跨端项目推动者'] },
+  { key: 'industry', title: '核心赋能场景', options: ['全球电商智能履约', '自媒体工业化生产', '私有化金融风控大模型', '企业级智能知识中枢'] },
+  { key: 'technology', title: 'AI 核心驱动架构', options: ['LLM Workflow 编排', '多模态 AIGC 矩阵', 'RAG + 向量检索增强', 'Multi-Agent 自主协同'] },
+  { key: 'goal', title: '北极星指标 (KPI)', options: ['释放 50% 基础人力', '获客转化率提升 300%', '突破性产品新卖点', '业务流转响应达秒级'] }
+];
+
+const EXISTING_PROJECTS = [
+  { 
+    id: 1, 
+    title: "全球多语言智能退换货流转引擎", 
+    desc: "基于大型语言模型构建，直接对接并吞吐全球海量售后工单。自动识别 30+ 语言意图、精准提取关键退换要素，处理负面情绪预警并实现工单流程全自动流转。", 
+    tags: ["LLM", "AI 客服", "业务流自动化"], 
+    status: "已完成", 
+    statusType: "completed" 
+  },
+  { 
+    id: 2, 
+    title: "多模态自适应短视频矩阵工厂", 
+    desc: "深度整合视频扩散模型与零次试音语音克隆（Zero-shot TTS）技术。仅需输入文案大纲，系统即可在 5 分钟内分裂生成适配多平台的混剪短剧、口播矩阵流。", 
+    tags: ["AIGC", "多模态生成", "指数级增长"], 
+    status: "推进中", 
+    statusType: "progress" 
+  },
+  { 
+    id: 3, 
+    title: "企业级投研行业知识内脑系统", 
+    desc: "打通内部沉淀的数百万份非结构化行研报告与私域数据字典。通过高级 RAG 架构进行知识增强，使 AI 能够秒级提取并对比财报指标，自动撰写投研初稿。", 
+    tags: ["RAG 架构", "企业知识库", "Agent 推理"], 
+    status: "规划中", 
+    statusType: "planned" 
+  },
+];
+
+const generateMockData = (nodeId: 1 | 2 | 3, payload: any) => {
+  return {
+    title: nodeId === 1 ? `架构推演系统` : nodeId === 2 ? `${payload.text?.substring(0,10) || '探索任务'}... 破局` : `${payload.title} 落地实战`,
+    scene: '业务群每天抱怨低效的人工流程，老板在例会点名：“能不能牵头把 AI 用起来？”\n\n你临危受命。既无 AI 专家背书，也没充足的算力支持。你不仅要弄出一个看似高大上的工具去汇报，还要从最基础的需求摸底、模型选型、不断试错开始，主导一次真正能为公司降本增效的落地战役。',
+    mission_brief: `【核心任务指示】\n背景：团队长期习惯于依赖密集人力“搬砖”，然而对新兴的 AI 技术充满了不切实际的科幻幻想。\n\n关键战役拆解：\n1. 明确边界：主动戳破期望泡泡，定义一个能在两周内部署、容错率高的 MVP 雏形。\n2. 原型验证：低成本利用大模型 API 走通骨干业务链路，跑通数据进行真实验货。\n3. 应对反噬：在内测时解决致命的 AI 幻觉问题，设立人工兜底机制保住系统公信力。\n4. 闭环收尾：将系统能力挂载入现有业务流转节点，统计提效 KPI 形成完整的闭环报告。`,
+    process: [
+      {
+        day: "Day 1-3", phase: "博弈与边界划定",
+        context: "你组织了一场全员会议，开始收集业务方对 AI 工具的期望。大家情绪高涨，提出各种天马行空的想法与需求。",
+        challenge: "业务方提出了几十个“科幻级”的离谱需求，希望 AI 不仅能整理表格，还能自动代替人工做复杂的资金流最终审批。他们对技术的边界毫无概念，期望值完全脱离了当前模型的能力上限与数据安全要求。",
+        action: "运用 MVP（最小可行性产品）思维展开预期管理，强行砍掉了 80% 不切实际的想法。通过划分 ROI 象限图，将战线牢牢锁定在一两个极高频刚需、且技术容错率较高的辅助场景（如初级话术起草和工单自动分类）。",
+        result: "将过高的预期拉低到了实战层面，避免项目一开始就背上不可能完成的任务，并顺利获批起步阶段的基础试错经费与数据访问权限。"
+      },
+      {
+        day: "Week 1", phase: "原型与触礁危机",
+        context: "利用现成的外部大模型 API 快速搭建了初版 Prototype 原型工具，导入了过往一个月的真实业务数据进行脱机跑批验证。",
+        challenge: "由于通用大模型缺乏公司特有的垂直业务知识储备，提取的信息频繁出现严重的“AI 幻觉”。模型甚至凭空捏造了不存在的数据接口与客户补偿政策，这要是发给真实客户将酿成不可挽回的公关与信任危机。",
+        action: "紧急叫停了原有全自动化直连客户的激进计划。转变产品交互形态，在系统的输出链路中强行加入了【人工审核验证层】（Human-in-the-loop），让 AI 退居二线，只作为业务人员的“建议草稿提供者”。",
+        result: "在有惊无险之中保住了业务底线及团队声誉。决策层也深刻意识到，纯靠提示词工程（Prompt Engineering）是不够的，急需探索能够结合本地知识的新架构方案。"
+      },
+      {
+        day: "Week 2", phase: "构筑知识壁垒",
+        context: "迅速引入外挂知识检索库架构（RAG），试图通过挂载公司内部的真实规章制度、SOP 流程文档，让大模型的回答能够可追溯、可控制。",
+        challenge: "公司历史文档年久失修，冗杂且废话极大。AI 在执行向量检索时常常张冠李戴，抓取到十年前过期的作废政策作为推理依据，导致合并生成的回答依旧经不起推敲，业务人员表示“需要花更多时间检查”。",
+        action: "放弃直接喂送原始文件，带领团队对非结构化文档进行一轮彻底的语料清洗与精准的语义切片（Chunking）。同时设定硬性系统级指令：AI 最终得出结论时，必须严格附带强匹配的源文档段落（Citation）并高亮显示。",
+        result: "模型输出的准确度与可信度迎来了质的飞跃。业务线骨干在深入试用多轮后，终于在 UAT 验收体验演示会上给出了『这玩意现在真敢用了』的积极反馈和高度认可。"
+      },
+      {
+        day: "Week 3", phase: "防线兜底与降级",
+        context: "系统经过多轮沙盒内测后，即将全量开放给整个大部门进行常态化使用。你必须提前为可能出现的生产环境故障设计好最差情况的容灾演练方案。",
+        challenge: "真实生产环境极其复杂且难以预测：如果底层调用的外部模型 API 突然因高并发瘫痪，或者用户提问过于含糊生僻导致大模型难以作答被困住，系统一旦无响应，一线业务体验将瞬间崩盘并引发强烈的负面情绪抵触。",
+        action: "在系统网关层挂载了极其严格的置信度阈值监控与响应超时熔断保护逻辑。一旦探针检测到推理置信度过低或接口发送超时异常，系统将立刻触发静默降级处理，将请求无缝切换并转交至传统的人工客服备用队列，确保业务不中断。",
+        result: "凭借这套万无一失的保底风控容灾机制，系统极其平稳地全量部署上线。在上线的首月内保证了业务线 0 级事故的前提下，自动消化了超过 30% 到 40% 的初级重复性人力处理任务，团队拿到了极佳的人效对标指标。"
+      }
+    ],
+    resume: `[简历亮点]\n‣ 低成本主导部门首个垂直 AI 工程落地，包揽从需求对齐、架构设计（知识增强 RAG）到端到端幻觉风险防范的全生命周期管控。\n‣ 主动梳理并实施复杂业务语料的高质量清洗与切片，构建了基于引用溯源（Citation）的稳定回复机制与低置信度下的平滑降级链路，彻底拦截了因 AI 幻觉可能导致的生产事故。\n‣ 该系统成功切入核心生产流转环节，在保证业务链 0 客诉的基础上，自动消化并分担了超 30% - 40% 的人工重复性流转任务，大幅提升了整个业务作战团队的响应人效与产出率。`,
+    linkedin: `[行业洞见经验分享]\n最近带领团队交付并顺利上线了一套核心业务级的 AI 辅助决策系统。在这个全流程跑下来后我深深体会到：调几个现成的 API 写个极简 Demo 并不难，真正难的是如何用敬畏安全的工程化思维去“驯化” AI 带来的非确定性风险。\n如果在架构设计的初期阶段就没有前置考虑【降级容灾】、【置信度阈值阻断】和【Human-in-the-loop 人工兜底验证控制】，那所谓的酷炫 AI 工具就是一个随时会摧毁用户信任的定时炸弹。脱离了实际业务风控去高谈阔论 AI 赋能，都是耍流氓。贴近战场的实战，才是检验技术管理架构思维底色深浅的唯一试金石！🚀`,
+    mentor_feedback: `[资深评委 / 面试官视角评价]\n这是一份非常扎实、有着充分实战厚度并且经过沉淀的复盘！你生动地体现出了当下市场上极度稀缺的系统级容错复用工程架构嗅觉。面对眼花缭乱的 AI 浪潮，有大量的新人甚至老鸟都只会盲目追求模型参数调优或堆砌华丽酷站界面，而你却非常敏锐且克制地抓紧了『幻觉控制、信任边界打探、常态化人工兜底降级』这几个关乎生死的业务核心“死穴”。这展示了你为了整个业务大盘的长期安全负责的高阶大局观，证明了你有绝对潜力来担当和主导复杂系统的技术一号位角色。`
+  };
+};
+
+// ==========================================
+// ANIMATIONS & CURSOR
+// ==========================================
+
+const CustomCursor = ({ hoverState }: { hoverState: boolean }) => {
+  const x = useMotionValue(-100);
+  const y = useMotionValue(-100);
+  const springX = useSpring(x, { stiffness: 800, damping: 35 });
+  const springY = useSpring(y, { stiffness: 800, damping: 35 });
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => { x.set(e.clientX); y.set(e.clientY); };
+    window.addEventListener('mousemove', handleMove);
+    return () => window.removeEventListener('mousemove', handleMove);
+  }, [x, y]);
+
+  return (
+    <motion.div style={{ x: springX, y: springY }} className="fixed top-0 left-0 pointer-events-none z-[9999] mix-blend-difference hidden md:block">
+      <motion.div 
+        animate={{ 
+          scale: hoverState ? 2.5 : 1, 
+          borderWidth: hoverState ? '1px' : '4px',
+          borderColor: hoverState ? '#fff' : '#fff',
+          backgroundColor: hoverState ? 'transparent' : '#fff'
+        }} 
+        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        className="absolute w-4 h-4 -ml-2 -mt-2 rounded-full border-white/90" 
+      />
+    </motion.div>
+  );
+};
+
+const MinimalBackground = () => (
+  <div className="fixed inset-0 z-0 pointer-events-none bg-[#F7F7F5] overflow-hidden">
+    <motion.div 
+      animate={{ backgroundPosition: ["0px 0px", "40px 40px"] }}
+      transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+      className="absolute inset-0 opacity-[0.04] bg-[linear-gradient(to_right,#000_1px,transparent_1px),linear-gradient(to_bottom,#000_1px,transparent_1px)] bg-[size:40px_40px]" 
     />
   </div>
 );
 
-const GUIDED_DATA = [
-  { key: 'issue', title: '【CTO】Slack: 当前卡点', options: ['数据库全表扫描', 'API 延迟飙升', '大模型 OOM 崩溃', '并发队列死锁'] },
-  { key: 'impact', title: '【PM】影响面评估', options: ['核心大客户', '全量 C 端瘫痪', '内部测试环境'] },
-  { key: 'directive', title: '【CEO】紧急指令', options: ['立刻切断容灾备份', '不管原因先恢复', '停机维护'] },
-  { key: 'action', title: '你的临时决策', options: ['重启服务', '降级大模型', '熔断限流', '增加机器'] }
-];
-
-const EXISTING_PROJECTS = [
-  { id: 1, title: "[PROD-942] 核心语义分发路由崩溃", desc: "昨晚发版后多语言工单全部路由到英文组，客户投诉激增", tags: ["P0 事故", "紧急回滚"], status: "数据暴跌中", statusType: "archived" },
-  { id: 2, title: "[REQ-118] 增加金融风控实时报警拦截", desc: "由于汇率剧烈波动，原有的 T+1 预警已失效，需改为毫秒级拦截", tags: ["需求变更", "业务施压"], status: "老板突然 Push", statusType: "progress" },
-  { id: 3, title: "[SYS-099] 企业知识库(RAG)幻觉投诉", desc: "大模型在回答 HR 政策时自己捏造了离职补偿条款，导致严重 PR 风险", tags: ["内部红线", "高危"], status: "上线事故", statusType: "planned" },
-  { id: 4, title: "[FEAT-204] 视觉扩散模型涉黄拦截部分失效", desc: "新跑的模型未能识别部分特殊视角的图像，合规部门要求停机整顿", tags: ["合规审查", "停机"], status: "紧急修复中", statusType: "expansion" },
-];
-
-const generateMockData = (nodeId: 1 | 2 | 3, payload: any) => ({
-  title: nodeId === 1 ? `Jira 工单: [紧急] 线上雪崩` : nodeId === 2 ? 'Slack: 紧急复盘会议' : `任务: ${payload.title}`,
-  scene: '刚才系统出现严重降级，所有北美节点的请求都被错误打回了，现在客户群里已经炸了。你需要马上采取行动。',
-  mission_brief: `【背景与任务目标】\n事故原因：昨日晚间发布的 v2.4 核心路由引擎更新中，包含了一段未经验证的熔断限流配置。今早 10:20 流量早高峰期间，该配置由于正则匹配溢出导致 Gateway_Router 陷入死锁，大量合法请求被拒绝并返回 502 错误。\n受影响范围：北美及欧洲节点的全部 API 请求，已收到超 400 起关键客户的严重投诉，潜在违约金高达数百万美元。\n您的任务：\n1. 立即识别并回滚导致崩溃的有毒配置（Toxic Configuration）。\n2. 在不中断剩余无损服务的情况下，部署临时降级策略以恢复受阻北美流量。\n3. 主导跨部门（研发、SRE、客户成功团队）的紧急通讯与事故宣告，平息客户怒火。\n4. 事故修复后，完成完整的 RFO (故障根因) 报告并提取可写入简历的应对经验。`,
-  process: [
-    '🔔 [Slack] @here CTO: 谁动了配置？马上定位问题！！',
-    '🚨 [P0 预警] 接口延迟 > 15,000ms',
-    '🔄 执行了紧急降级与回滚，暂时稳住局面。',
-    '📊 [Jira] 新建任务：彻查本次更新导致的崩溃根因。'
-  ],
-  resume: `[简历金句] ‣ 主导并处理了影响北美节点的 P0 级系统停机事故，在 10 分钟内将延迟从 >15s 恢复至 <200ms。\n[STAR 法则] ‣ 情境：全球网关遭遇毁灭性配置错误。\n‣ 任务：立即恢复服务并止损。\n‣ 行动：协调跨部门实施有毒配置回滚，并部署自动化熔断器防止连锁反应。\n‣ 结果：成功阻止了系统性崩溃，将系统可用性重新拉回至 99.99%。`,
-  linkedin: `【领英/动态分享】\n熬过 P0 事故是成长的必经之路！今天为了应对全球网关的延迟激增，我的团队实现了一种即时回滚机制。真正的工程能力往往在压力下绽放。 #技术领导力 #SRE #危机管理`,
-  mentor_feedback: `【AI 导师 (硅谷 CTO 毒舌视角) 💬】\n"还算能看的抢救，但你第一时间居然没去查监控报警的源头，而是直接降级？这非常业余。在大厂，你这操作会被写进事故复盘的负面典型里。下次遇到这种情况，先稳住流量，然后分流排查，不要搞一刀切！"`
-});
-
-const COLOR_THEMES = {
-  1: {
-    text: "text-[#10b981]",
-    bg: "bg-[#10b981]",
-    bgOpacity10: "bg-[#10b981]/10",
-    border20: "border-emerald-500/20",
-    text80: "text-emerald-500/80",
-    selection: "selection:bg-[#10b981]/30",
-    fill: "fill-emerald-500"
-  },
-  2: {
-    text: "text-[#0ea5e9]",
-    bg: "bg-[#0ea5e9]",
-    bgOpacity10: "bg-[#0ea5e9]/10",
-    border20: "border-sky-500/20",
-    text80: "text-sky-500/80",
-    selection: "selection:bg-[#0ea5e9]/30",
-    fill: "fill-sky-500"
-  },
-  3: {
-    text: "text-[#8b5cf6]",
-    bg: "bg-[#8b5cf6]",
-    bgOpacity10: "bg-[#8b5cf6]/10",
-    border20: "border-violet-500/20",
-    text80: "text-violet-500/80",
-    selection: "selection:bg-[#8b5cf6]/30",
-    fill: "fill-violet-500"
-  }
-} as const;
-
-type ThemeMode = 1 | 2 | 3;
-
-const CopyBtn = ({ text, t }: { text: string, t: any }) => {
-  const [copied, setCopied] = useState(false);
-  const onCopy = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-  return (
-    <button onClick={onCopy} className={cn("p-1.5 rounded-md transition-colors border", copied ? cn(t.bgOpacity10, t.border20, t.text) : "border-transparent text-white/40 hover:bg-white/5 hover:text-white/80")}>
-      {copied ? <Check size={14} /> : <Copy size={14} />}
-    </button>
-  );
-};
-
-const TypewriterText = ({ text, delay = 15 }: { text: string, delay?: number }) => {
-  const [displayedText, setDisplayedText] = useState("");
-
+const ScrambleText = ({ text }: { text: string }) => {
+  const [displayText, setDisplayText] = useState(text);
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
   useEffect(() => {
-    let i = 0;
-    setDisplayedText("");
-    const interval = setInterval(() => {
-      if (i < text.length) {
-        setDisplayedText(prev => prev + text.charAt(i));
-        i++;
-      } else {
-        clearInterval(interval);
-      }
-    }, delay);
-    return () => clearInterval(interval);
-  }, [text, delay]);
-
-  return <>{displayedText}</>;
+    let iteration = 0;
+    let interval: ReturnType<typeof setInterval> | null = null;
+    interval = setInterval(() => {
+      setDisplayText(t => t.split("").map((l, i) => i < iteration ? text[i] : letters[Math.floor(Math.random() * 26)]).join(""));
+      if (iteration >= text.length) clearInterval(interval!);
+      iteration += 1 / 3;
+    }, 20);
+    return () => {
+      if (interval) clearInterval(interval);
+    }
+  }, [text]);
+  return <span className="tracking-tighter">{displayText}</span>;
 };
 
-const TerminalSimulation = ({ activeNode }: { activeNode: ThemeMode | null }) => {
-   const [logs, setLogs] = useState<string[]>([]);
-   const [isRunning, setIsRunning] = useState(false);
-   const scrollRef = useRef<HTMLDivElement>(null);
-   const t = activeNode ? COLOR_THEMES[activeNode] : COLOR_THEMES[1];
-
-   useEffect(() => {
-     if (scrollRef.current) {
-       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-     }
-   }, [logs]);
-
-   useEffect(() => {
-     const handleRun = () => {
-        setIsRunning(true);
-        setLogs([]);
-        const steps = [
-          "[10:30:15] 🚨 P0 报警: 接口延迟 > 15s...",
-          "[10:30:18] > 正在初始化战时复盘室...",
-          "[10:30:22] [Slack] @值班工程师 客户投诉服务不可用！",
-          "[10:30:26] > 挂载线上流量图谱... 分析中",
-          "[10:30:31] ⚠️ 发现异常点，定位模块: 网关路由器",
-          "WAIT",
-          "[10:30:45] ✨ 临时降级策略已应用，服务状态: 正在恢复",
-          "[10:30:52] [Jira] 自动生成事故记录单 工单-991",
-          "[10:30:58] => 正在抽取职业资产...",
-          "WAIT",
-          "✅ 职业履历片段生成完毕！"
-        ];
-        let idx = 0;
-        const intv = setInterval(() => {
-          if (idx < steps.length) {
-             const step = steps[idx];
-             if (step !== "WAIT") setLogs(p => [...p, step]);
-             idx++;
-          } else {
-             setIsRunning(false);
-             clearInterval(intv);
-          }
-        }, 300);
-     };
-     window.addEventListener('run-sim', handleRun);
-     return () => window.removeEventListener('run-sim', handleRun);
-   }, []);
-
-   return (
-     <div className="flex flex-col h-full bg-[#050505] rounded-xl border border-white/5 overflow-hidden shadow-inner group">
-       <div className="h-8 bg-white/[0.02] border-b border-white/5 flex items-center px-4 gap-2">
-          <Terminal size={12} className="text-white/40" />
-          <span className="text-[10px] uppercase font-mono tracking-widest text-white/50">模拟运行过程</span>
-       </div>
-       <div ref={scrollRef} className="flex-1 p-4 font-mono text-[11px] leading-relaxed text-white/60 overflow-y-auto custom-scrollbar">
-          {!isRunning && logs.length === 0 && (
-            <div className="text-white/20 italic select-none">点击上方的“看看它是怎么运转的”按钮，查看系统如何工作...</div>
-          )}
-          {logs.map((log, i) => (
-             <motion.div initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }} key={i} className={log.includes('✅') || log.includes('✨') ? t.text : ''}>
-               {log}
-             </motion.div>
-          ))}
-          {isRunning && <div className="flex items-center gap-2 text-white/30 pt-2"><span className={cn("w-1.5 h-3 animate-pulse", t.bg)} /> 正在解析...</div>}
-       </div>
-     </div>
-   );
-};
+// ==========================================
+// CORE APP
+// ==========================================
 
 export default function App() {
+  const [hoverState, setHoverState] = useState(false);
+  
   const [guided, setGuided] = useState<Record<string, string>>({});
   const [customInput, setCustomInput] = useState("");
   const [activeNode, setActiveNode] = useState<1 | 2 | 3 | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showNotification, setShowNotification] = useState(false);
-  const [notificationConfig, setNotificationConfig] = useState({
-    title: '紧急提醒',
-    role: 'CTO',
-    color: 'red',
-    content: '"@here 系统好像挂了？！客户说收到一堆乱码，什么情况，赶快给我查！这是今天的 P0！"'
-  });
   const [output, setOutput] = useState<any>(null);
-
-  const n1Ref = useRef<HTMLDivElement>(null);
-  const n2Ref = useRef<HTMLDivElement>(null);
-  const n3Ref = useRef<HTMLDivElement>(null);
-  const resRef = useRef<HTMLDivElement>(null);
-  const [line, setLine] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const activeColor = activeNode === 1 ? "#10b981" : activeNode === 2 ? "#0ea5e9" : activeNode === 3 ? "#8b5cf6" : "#ff4e00";
-  const t = activeNode ? COLOR_THEMES[activeNode] : COLOR_THEMES[1];
-
-  const updateLine = () => {
-    if (!activeNode || !output || !resRef.current || !containerRef.current) return setLine(null);
-    const src = activeNode === 1 ? n1Ref : activeNode === 2 ? n2Ref : n3Ref;
-    if (src.current && resRef.current) {
-      const sRect = src.current.getBoundingClientRect();
-      const tRect = resRef.current.getBoundingClientRect();
-      const cRect = containerRef.current.getBoundingClientRect();
-
-      // Calculate coordinates relative to the absolute container
-      setLine({
-        x1: sRect.left - cRect.left + sRect.width / 2, 
-        y1: sRect.top - cRect.top + sRect.height,
-        x2: tRect.left - cRect.left + tRect.width / 2, 
-        y2: tRect.top - cRect.top
-      });
-    }
-  };
-
-  useEffect(() => {
-    let timer: any;
-    if (output) timer = setTimeout(updateLine, 150); // Ensure layout is settled
-    
-    const obs = new ResizeObserver(updateLine);
-    if (containerRef.current) obs.observe(containerRef.current);
-    
-    window.addEventListener("resize", updateLine);
-    return () => {
-      clearTimeout(timer);
-      obs.disconnect();
-      window.removeEventListener("resize", updateLine);
-    };
-  }, [activeNode, output]);
-
-  const toggleGuided = (k: string, v: string) => setGuided(p => p[k] === v ? { ...p, [k]: undefined } as any : { ...p, [k]: v });
+  const [missionStatus, setMissionStatus] = useState<'idle' | 'started' | 'completed'>('idle');
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   const run = (id: 1 | 2 | 3, payload: any) => {
-    setActiveNode(id);
-    
-    if (id === 1) {
-      setNotificationConfig({
-        title: '紧急提醒',
-        role: 'CTO',
-        color: 'red',
-        content: '"@here 系统好像挂了？！客户说收到一堆乱码，什么情况，赶快给我查！这是今天的 P0！"'
-      });
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 5000);
-    }
+    setActiveNode(id); setOutput(null); setMissionStatus('idle'); setCurrentStepIndex(0); setIsProcessing(true);
+    setTimeout(() => { setIsProcessing(false); setOutput(generateMockData(id, payload)); }, 2000);
+  };
 
-    if (id === 2 && typeof payload.text === 'string' && payload.text.trim().length < 20) {
-      setNotificationConfig({
-        title: '暴躁 PM 的反馈',
-        role: 'PM',
-        color: 'orange',
-        content: '"你写的这是什么玩意儿？！客户系统挂了你在这儿打哈哈？连个具体恢复时间和排查方案都没有！重新写！至少说清楚你打算降级什么组件、查什么日志！"'
-      });
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 5000);
-      return; 
-    }
+  const bindHover = {
+    onMouseEnter: () => setHoverState(true),
+    onMouseLeave: () => setHoverState(false)
+  };
 
-    setOutput(null);
-    setLine(null);
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      setOutput(generateMockData(id, payload));
-    }, 1800); // Snappier processing
+  const stepTransition = {
+    hidden: { opacity: 0, x: 20, filter: "blur(3px)", scale: 0.98 },
+    visible: { opacity: 1, x: 0, filter: "blur(0px)", scale: 1, transition: { type: "spring", stiffness: 450, damping: 35, staggerChildren: 0.08 } },
+    exit: { opacity: 0, x: -20, filter: "blur(3px)", scale: 0.98, transition: { duration: 0.2 } }
+  };
+
+  const itemTransition = {
+    hidden: { opacity: 0, y: 15 },
+    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 400, damping: 30 } }
   };
 
   return (
-    <div ref={containerRef} className={cn("flex flex-col min-h-screen bg-transparent text-white/90 font-sans p-4 lg:p-6 gap-6 relative overflow-y-auto custom-scrollbar", activeNode ? t.selection : "selection:bg-[#ff4e00]/30")}>
-      <AtmosphericBackground />
+    <div className="min-h-screen font-sans relative overflow-x-hidden md:cursor-none text-[#111] selection:bg-black/10">
+      <CustomCursor hoverState={hoverState} />
+      
+      <MinimalBackground />
 
-      <AnimatePresence>
-        {showNotification && (
-          <motion.div initial={{ x: 100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }} className="fixed top-20 right-6 z-[100] bg-[#161618]/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-xl p-4 w-80 text-sm">
-            <div className="flex items-center gap-3 mb-2 pb-2 border-b border-white/5">
-              <div className={cn("w-8 h-8 rounded border flex items-center justify-center font-bold text-[11px]", 
-                notificationConfig.color === 'red' ? "bg-red-500/20 text-red-500 border-red-500/30" : "bg-orange-500/20 text-orange-500 border-orange-500/30"
-              )}>
-                {notificationConfig.role}
-              </div>
-              <div>
-                <div className="text-white/90 font-medium text-[12px]">{notificationConfig.title}</div>
-                <div className="text-white/40 text-[10px] font-mono">#事故频道</div>
-              </div>
-            </div>
-            <p className="text-white/70 text-[12px] leading-relaxed">{notificationConfig.content}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <svg className="absolute inset-0 pointer-events-none z-0" style={{ width: '100%', height: '100%' }}>
-        <AnimatePresence>
-          {line && (
-            <motion.path
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 0.4 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.8, ease: "easeInOut" }}
-              d={`M ${line.x1} ${line.y1 + 4} C ${line.x1} ${line.y1 + 100}, ${line.x2} ${line.y2 - 100}, ${line.x2} ${line.y2 - 4}`}
-              stroke={activeColor} strokeWidth="1" fill="none" strokeDasharray="4 4"
-            />
-          )}
-        </AnimatePresence>
-      </svg>
-
-      {/* Extreme Compact Header */}
-      <header className="shrink-0 flex items-center justify-between z-10 px-2 lg:px-4">
-        <div className="flex items-center gap-4 text-[13px] font-mono tracking-widest uppercase text-white/50">
-          <div className="flex items-center gap-2 font-semibold">
-            <span className={cn("w-2 h-2 rounded-full blur-[1px] animate-pulse", activeNode ? t.bg : "bg-white/50")} />
-            IQX 实验室 / OmniBrain 入职初体验
-          </div>
-          <span className="w-[1px] h-3 bg-white/20" />
-          <span className="text-white/30 hidden sm:inline-block">Vision-Syn 内部任务工作区</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex -space-x-2">
-             <div className="w-6 h-6 rounded-full border border-black bg-blue-500 flex items-center justify-center text-[10px] text-white font-medium z-30 ring-1 ring-white/10">CTO</div>
-             <div className="w-6 h-6 rounded-full border border-black bg-red-500 flex items-center justify-center text-[10px] text-white font-medium z-20 ring-1 ring-white/10">PM</div>
-             <div className="w-6 h-6 rounded-full border border-black bg-emerald-500 flex items-center justify-center text-[10px] text-white font-medium z-10 ring-1 ring-white/10 relative">
-               我
-               <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0A0A0B]"></span>
-             </div>
-          </div>
-          <div className="text-[11px] bg-white/5 border border-white/10 px-3 py-1 rounded-full text-white/40 font-mono flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            在线：您已加入
-          </div>
-        </div>
-      </header>
-
-      {/* Top Row: Input Modules (3 Columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 shrink-0 z-10">
+      <div className="relative z-10 flex flex-col min-h-screen w-full max-w-7xl mx-auto p-4 md:p-6">
         
-        {/* Node 1 */}
-        <div ref={n1Ref} className={cn("group flex flex-col bg-[#0A0A0B]/80 backdrop-blur-xl border rounded-[16px] p-5 transition-all duration-500", activeNode === 1 ? "border-[#10b981]/50 shadow-[0_4px_30px_rgba(16,185,129,0.15)] ring-1 ring-[#10b981]/20 transform -translate-y-1" : "border-white/5 hover:border-[#10b981]/30 hover:shadow-[0_4px_20px_rgba(16,185,129,0.08)] hover:-translate-y-0.5")}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center border transition-colors", activeNode === 1 ? "bg-[#10b981]/10 border-[#10b981]/30 text-[#10b981]" : "bg-white/5 border-white/5 text-white/70 group-hover:text-[#10b981]/80")}><MessageSquare size={14} /></div>
-            <div>
-              <h2 className="text-[13px] font-medium tracking-wide text-white/90 group-hover:text-white transition-colors">Slack: CTO 发来的需求</h2>
-              <p className="text-[10px] text-white/40 mt-0.5 font-mono uppercase tracking-widest group-hover:text-white/50 transition-colors">紧急沟通 / 请立即决策</p>
-            </div>
+        {/* Header */}
+        <header className="flex justify-between items-center mb-4">
+          <div className="font-black tracking-widest uppercase flex items-center gap-2 text-black text-sm">
+             <div className="w-3 h-3 bg-black" />
+             OMNIBRAIN
           </div>
-          <div className="flex-1 space-y-4 mb-5 overflow-y-auto custom-scrollbar pr-2 h-[130px] lg:h-auto opacity-90 group-hover:opacity-100 transition-opacity">
-            {GUIDED_DATA.map(s => (
-              <div key={s.key}>
-                <h5 className="text-[10px] text-white/30 mb-2 font-mono uppercase">{s.title}</h5>
-                <div className="flex flex-wrap gap-1.5">
-                   {s.options.map(opt => (
-                     <button key={opt} onClick={() => toggleGuided(s.key, opt)} className={cn("px-2.5 py-1 text-[11px] rounded-[6px] transition-all duration-200", guided[s.key] === opt ? "bg-[#10b981] text-white font-medium shadow-[0_2px_10px_rgba(16,185,129,0.3)] scale-105" : "bg-white/5 text-white/60 hover:bg-[#10b981]/10 hover:text-[#10b981] border border-white/5 hover:border-[#10b981]/30")}>
-                       {opt}
-                     </button>
-                   ))}
+        </header>
+
+        <AnimatePresence mode="wait">
+          {/* STAGE 0: SELECTION */}
+          {(!output && !isProcessing) && (
+            <motion.div key="stage0" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, filter: "blur(10px)", y: -10 }} className="flex-1 flex flex-col justify-center gap-4 pb-6">
+              <div className="text-center md:text-left mb-0">
+                <motion.h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tighter uppercase leading-none text-black">
+                  <ScrambleText text="AI 项目模拟沙盘实验室" />
+                </motion.h1>
+                <div className="text-sm md:text-[15px] leading-relaxed font-bold opacity-70">
+                  选择沉浸式演练路径，深入复杂 AI 落地项目。<br />
+                  通过高容积的博弈系统，助您萃取实战资产与面试高阶语料。
                 </div>
               </div>
-            ))}
-          </div>
-          <button onClick={() => run(1, guided)} className={cn("shrink-0 w-full py-2 bg-transparent rounded-lg text-[12px] font-medium transition-all flex items-center justify-center gap-2 border", activeNode === 1 ? "bg-[#10b981]/10 border-[#10b981]/40 text-[#10b981]" : "border-white/10 text-white/70 hover:border-[#10b981]/50 hover:bg-[#10b981]/10 hover:text-[#10b981] shadow-sm")}>
-            进入模拟体验 <Play size={12} fill="currentColor" />
-          </button>
-        </div>
 
-        {/* Node 2 */}
-        <div ref={n2Ref} className={cn("group flex flex-col bg-[#0A0A0B]/80 backdrop-blur-xl border rounded-[16px] p-5 transition-all duration-500", activeNode === 2 ? "border-[#0ea5e9]/50 shadow-[0_4px_30px_rgba(14,165,233,0.15)] ring-1 ring-[#0ea5e9]/20 transform -translate-y-1" : "border-white/5 hover:border-[#0ea5e9]/30 hover:shadow-[0_4px_20px_rgba(14,165,233,0.08)] hover:-translate-y-0.5")}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center border transition-colors", activeNode === 2 ? "bg-[#0ea5e9]/10 border-[#0ea5e9]/30 text-[#0ea5e9]" : "bg-white/5 border-white/5 text-white/70 group-hover:text-[#0ea5e9]/80")}><MessageSquare size={14} /></div>
-            <div>
-              <h2 className="text-[13px] font-medium tracking-wide text-white/90 group-hover:text-white transition-colors">客户投诉截图 / Ticket</h2>
-              <p className="text-[10px] text-white/40 mt-0.5 font-mono uppercase tracking-widest group-hover:text-white/50 transition-colors">收到一封愤怒的邮件...</p>
-            </div>
-          </div>
-          <div className="flex-1 flex flex-col mb-5 opacity-90 group-hover:opacity-100 transition-opacity">
-            <textarea value={customInput} onChange={e => setCustomInput(e.target.value)} placeholder="“你们的系统又挂了！我刚才的操作数据全丢了，今天如果不能恢复并给出合理解释我马上解约！”...请输入你的第一步响应手段" className="flex-1 w-full bg-black/40 border border-white/5 rounded-lg p-3 text-[12px] leading-relaxed text-white/80 placeholder:text-white/20 focus:outline-none resize-none custom-scrollbar focus:border-[#0ea5e9]/40 focus:ring-1 focus:ring-[#0ea5e9]/20 transition-all shadow-inner" />
-          </div>
-          <button disabled={!customInput.trim()} onClick={() => run(2, { text: customInput })} className={cn("shrink-0 w-full py-2 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-[12px] font-medium transition-all flex items-center justify-center gap-2 border", activeNode === 2 ? "bg-[#0ea5e9] text-white border-transparent shadow-[0_2px_15px_rgba(14,165,233,0.3)]" : "bg-white/5 border-white/10 text-white/80 hover:border-[#0ea5e9]/50 hover:bg-[#0ea5e9]/10 hover:text-[#0ea5e9]")}>
-            开启你的首个项目 <Play size={12} fill="currentColor" />
-          </button>
-        </div>
-
-        {/* Node 3 */}
-        <div ref={n3Ref} className={cn("group flex flex-col bg-[#0A0A0B]/80 backdrop-blur-xl border rounded-[16px] p-5 transition-all duration-500", activeNode === 3 ? "border-[#8b5cf6]/50 shadow-[0_4px_30px_rgba(139,92,246,0.15)] ring-1 ring-[#8b5cf6]/20 transform -translate-y-1" : "border-white/5 hover:border-[#8b5cf6]/30 hover:shadow-[0_4px_20px_rgba(139,92,246,0.08)] hover:-translate-y-0.5")}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center border transition-colors", activeNode === 3 ? "bg-[#8b5cf6]/10 border-[#8b5cf6]/30 text-[#8b5cf6]" : "bg-white/5 border-white/5 text-white/70 group-hover:text-[#8b5cf6]/80")}><FileText size={14} /></div>
-            <div>
-              <h2 className="text-[13px] font-medium tracking-wide text-white/90 group-hover:text-white transition-colors">Jira: Active Sprint</h2>
-              <p className="text-[10px] text-white/40 mt-0.5 font-mono uppercase tracking-widest group-hover:text-white/50 transition-colors">高危隐患与突发事故处理区</p>
-            </div>
-          </div>
-          <div className="flex-1 space-y-2.5 overflow-y-auto custom-scrollbar pr-2 h-[130px] lg:h-auto opacity-90 group-hover:opacity-100 transition-opacity">
-            {EXISTING_PROJECTS.map(p => (
-              <div key={p.id} onClick={() => run(3, p)} className={cn("cursor-pointer p-3 bg-black/40 border rounded-lg transition-all duration-300", activeNode === 3 ? "border-[#8b5cf6]/20 hover:border-[#8b5cf6]/50 hover:bg-[#8b5cf6]/5" : "border-white/5 hover:border-[#8b5cf6]/30 hover:bg-[#8b5cf6]/5")}>
-                <div className="flex justify-between items-start mb-1.5">
-                  <h4 className="text-[12px] font-medium text-white/90 truncate mr-2 group-hover:text-white">{p.title}</h4>
-                  <div className={cn(
-                    "text-[9px] px-1.5 py-0.5 rounded-full border shrink-0 font-medium",
-                    p.statusType === 'archived' ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                    p.statusType === 'progress' ? "bg-orange-500/10 text-orange-400 border-orange-500/20" :
-                    p.statusType === 'planned' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
-                    "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                  )}>
-                    {p.status}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                
+                {/* NODE 1 */}
+                <motion.div whileHover={{ y: -4, boxShadow: "6px 6px 0 0 rgba(0,0,0,1)" }} {...bindHover} className="bg-white border-black border-[3px] shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-5 md:p-6 flex flex-col transition-all duration-300 rounded-[24px]">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 flex items-center justify-center rounded-[12px] border-[3px] border-black text-black"><Layers size={20}/></div>
+                    <div><h2 className="text-lg font-black uppercase tracking-tight">智能化立项推演</h2></div>
                   </div>
-                </div>
-                <p className="text-[11px] text-white/40 font-light mb-2 line-clamp-1">{p.desc}</p>
-                <div className="flex gap-1.5 overflow-x-hidden">
-                  {p.tags.map(t => (
-                    <span key={t} className="text-[9px] px-1.5 py-0.5 bg-white/5 text-white/30 rounded border border-transparent">
-                      #{t}
-                    </span>
+                  <div className="flex-1 space-y-4 mb-5 overflow-y-auto pr-1">
+                    {GUIDED_DATA.map(s => (
+                      <div key={s.key}>
+                        <h5 className="text-[11px] mb-2 uppercase tracking-widest font-black opacity-60">{s.title}</h5>
+                        <div className="flex flex-wrap gap-1.5">
+                          {s.options.map(opt => {
+                            const isSel = guided[s.key] === opt;
+                            return (
+                              <button key={opt} onClick={() => setGuided(p => ({ ...p, [s.key]: isSel ? undefined : opt as any }))}
+                                className={cn("px-2.5 py-1.5 text-[12px] rounded-md font-bold transition-all border-2", 
+                                  isSel ? "bg-black text-white border-black shadow-[2px_2px_0_0_rgba(0,0,0,0.5)]" : "border-black/10 hover:border-black/40 text-black bg-black/[0.03]"
+                                )}
+                              >
+                                {opt}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => run(1, guided)} className="w-full py-3.5 rounded-lg text-[15px] font-black flex justify-center items-center gap-2 uppercase tracking-wide transition-all bg-black text-white hover:bg-black/90 active:scale-95 border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,0.5)]">
+                    生成核心场景视角 <Play size={14} fill="currentColor" />
+                  </button>
+                </motion.div>
+
+                {/* NODE 2 */}
+                <motion.div whileHover={{ y: -4, boxShadow: "6px 6px 0 0 rgba(0,0,0,1)" }} {...bindHover} className="bg-white border-black border-[3px] shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-5 md:p-6 flex flex-col transition-all duration-300 rounded-[24px]">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 flex items-center justify-center rounded-[12px] border-[3px] border-black text-black"><Terminal size={20}/></div>
+                    <div><h2 className="text-lg font-black uppercase tracking-tight">自定义痛点实验室</h2></div>
+                  </div>
+                  <textarea value={customInput} onChange={e => setCustomInput(e.target.value)} placeholder="描述业务线正在头疼的烂摊子 (例如：销售线索一直流失，人力全耗在初筛上，老板让我想办法搭个基于大模型的全自动过滤机器人...)" 
+                    className="flex-1 w-full p-4 text-[13px] font-bold leading-[1.6] rounded-[12px] resize-none focus:outline-none transition-all mb-5 bg-black/[0.02] border-[3px] border-black/10 focus:border-black placeholder:text-black/30 text-black shadow-inner" />
+                  <button disabled={!customInput.trim()} onClick={() => run(2, { text: customInput })} 
+                    className="w-full py-3.5 rounded-lg text-[15px] font-black flex justify-center items-center gap-2 uppercase tracking-wide disabled:opacity-50 transition-all bg-black text-white hover:bg-black/90 active:scale-95 border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,0.5)]">
+                    注入专项破局方案 <Play size={14} fill="currentColor" />
+                  </button>
+                </motion.div>
+
+                {/* NODE 3 */}
+                <motion.div whileHover={{ y: -4, boxShadow: "6px 6px 0 0 rgba(0,0,0,1)" }} {...bindHover} className="bg-white border-black border-[3px] shadow-[4px_4px_0_0_rgba(0,0,0,1)] p-5 md:p-6 flex flex-col transition-all duration-300 rounded-[24px]">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 flex items-center justify-center rounded-[12px] border-[3px] border-black text-black"><Briefcase size={20}/></div>
+                    <div><h2 className="text-lg font-black uppercase tracking-tight">真实落地项目库</h2></div>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    {EXISTING_PROJECTS.map((p, i) => (
+                      <motion.div whileHover={{ scale: 1.01, borderColor: "rgba(0,0,0,1)" }} key={p.id} onClick={() => run(3, p)} className="cursor-pointer p-3.5 rounded-[12px] transition-all duration-200 border-[3px] border-black/10 bg-black/[0.02] shadow-[2px_2px_0_0_rgba(0,0,0,0)] hover:shadow-[3px_3px_0_0_rgba(0,0,0,1)] relative">
+                        <div className="flex justify-between items-start mb-1.5">
+                          <h4 className="text-[13px] leading-tight font-black text-black tracking-tight pr-2">{p.title}</h4>
+                          <span className={cn("text-[10px] whitespace-nowrap font-bold px-1.5 py-0.5 rounded-md border-2",
+                            p.statusType === 'completed' ? "bg-green-100 text-green-800 border-green-300" :
+                            p.statusType === 'progress' ? "bg-orange-100 text-orange-800 border-orange-300" :
+                            "bg-gray-100 text-gray-800 border-gray-300"
+                          )}>
+                            {p.status}
+                          </span>
+                        </div>
+                        <p className="text-[11px] leading-relaxed line-clamp-2 text-black/70 font-medium">{p.desc}</p>
+                        <div className="flex gap-1.5 mt-2">
+                           {p.tags.map(tag => (
+                             <span key={tag} className="text-[9px] font-bold px-1.5 py-0.5 bg-black/5 text-black/60 rounded uppercase">{tag}</span>
+                           ))}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+
+              </div>
+            </motion.div>
+          )}
+
+          {/* STAGE 1: PROCESSING */}
+          {isProcessing && (
+            <motion.div key="stage1" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex-1 flex flex-col items-center justify-center pb-20">
+              <motion.div animate={{ rotate: 180 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}>
+                 <Code className="w-16 h-16 mb-6 text-black opacity-90" />
+              </motion.div>
+              <div className="text-2xl md:text-3xl font-black uppercase tracking-widest text-black">
+                <ScrambleText text="ASSEMBLING SCENARIO" />
+              </div>
+            </motion.div>
+          )}
+
+          {/* STAGE 2: BRIEFING */}
+          {(output && !isProcessing && missionStatus === 'idle') && (
+            <motion.div key="stage2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ type: "spring", damping: 25 }} className="flex-1 flex flex-col justify-center items-center max-w-4xl mx-auto py-4">
+              <h3 className="text-3xl md:text-4xl font-black leading-[1.1] mb-4 tracking-tighter uppercase text-center">
+                <ScrambleText text={output.title} />
+              </h3>
+              <p className="text-[14px] md:text-[15px] text-center leading-[1.6] mb-6 font-medium opacity-80 whitespace-pre-wrap px-4">{output.scene}</p>
+              
+              <div className="p-5 md:p-6 rounded-[20px] text-left w-full mb-6 bg-white border-[3px] border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+                <div className="flex items-center gap-2 font-black text-xs md:text-sm mb-3 uppercase tracking-widest text-black pb-2 border-b-[3px] border-black/10"><Target size={16} /> Mission Control Requirements</div>
+                <div className="whitespace-pre-wrap leading-[1.8] font-medium text-[13px] md:text-[14px] text-black/80">{output.mission_brief}</div>
+              </div>
+
+              <motion.button 
+                whileHover={{ scale: 1.02, boxShadow: "4px 4px 0 0 rgba(0,0,0,1)" }} 
+                whileTap={{ scale: 0.98 }}
+                {...bindHover} 
+                onClick={() => setMissionStatus('started')} 
+                className="px-8 py-3.5 rounded-lg font-black text-sm uppercase tracking-widest flex items-center gap-2 transition-all bg-black text-white border-[3px] border-black"
+              >
+                Initiate Workflow <ChevronRight size={18} />
+              </motion.button>
+            </motion.div>
+          )}
+
+          {/* STAGE 3: INTERACTIVE PROCESS */}
+          {(output && !isProcessing && missionStatus === 'started') && (
+            <motion.div key="stage3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 w-full max-w-5xl mx-auto py-2 md:py-4 flex flex-col h-full min-h-0">
+              
+              <div className="flex justify-between items-center mb-4 gap-4 px-2">
+                <div className="flex gap-1.5 p-1 bg-black/[0.04] rounded-full border border-black/5">
+                  {output.process.map((p: any, i: number) => (
+                    <motion.div key={i} layout className={cn("h-1.5 transition-all rounded-full", i === currentStepIndex ? "w-8 bg-black" : i < currentStepIndex ? "w-4 bg-black/40" : "w-2 bg-black/10")} />
                   ))}
                 </div>
+                <div className="font-black text-[10px] md:text-xs tracking-widest uppercase text-black">
+                  Phase {currentStepIndex + 1} / {output.process.length}
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
 
-      {/* Processing State Overlay */}
-      <AnimatePresence>
-        {isProcessing && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-x-0 bottom-0 top-[280px] z-50 flex items-center justify-center backdrop-blur-[2px]">
-            <div className="bg-[#0A0A0B]/90 border border-white/10 px-6 py-4 rounded-xl flex items-center gap-4 shadow-2xl">
-               <Activity className={cn("w-5 h-5 animate-pulse", t.text)} />
-               <span className={cn("text-[12px] font-mono tracking-widest", t.text)}>&gt;&gt; 正在进入模拟工作区...</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <AnimatePresence mode="wait">
+                <motion.div 
+                  key={`step-${currentStepIndex}`}
+                  variants={stepTransition}
+                  initial="hidden" animate="visible" exit="exit"
+                  className="p-5 md:p-6 rounded-[24px] relative overflow-hidden bg-white border-[3px] border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex-1 flex flex-col"
+                >
+                  <motion.h4 variants={itemTransition} className="text-lg md:text-xl font-black mb-4 leading-[1.4] tracking-tight text-black border-b-[3px] border-black/10 pb-3">
+                    {output.process[currentStepIndex].context}
+                  </motion.h4>
 
-      {/* Bottom Area: Output Workspace (Flex-1) */}
-      <div className="flex-1 min-h-0 relative z-10 flex flex-col">
-        {!output && !isProcessing && (
-          <div className="flex-1 flex flex-col items-center justify-center border border-white/5 border-dashed rounded-2xl bg-white/[0.01]">
-            <Server size={24} className="text-white/10 mb-4" />
-            <p className="text-[12px] text-white/30 tracking-wide font-mono">请在上方选择一个工作项，开始你的模拟体验</p>
-          </div>
-        )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 flex-1 content-start">
+                    <motion.div variants={itemTransition} className="flex flex-col gap-2">
+                      <div className="font-black text-[11px] text-red-600 uppercase tracking-widest flex items-center gap-1.5 bg-red-50 self-start px-2.5 py-1 rounded-md border-2 border-red-200">
+                         <AlertTriangle size={14}/> 核心业务阻力
+                      </div>
+                      <div className="p-4 rounded-[16px] h-full leading-[1.6] bg-red-50/40 border-[3px] border-red-100 font-medium text-[13px] md:text-[14px] text-red-950/90 shadow-sm">
+                        {output.process[currentStepIndex].challenge}
+                      </div>
+                    </motion.div>
 
-        <AnimatePresence>
-          {output && !isProcessing && (
-            <motion.section ref={resRef} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
-               
-               {/* Left Panel: Analysis & Action Plan */}
-               <div className="flex-[4] flex flex-col gap-4 min-h-0">
-                 {/* Top info card */}
-                 <div className="bg-[#0A0A0B]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-5 relative overflow-hidden shrink-0">
-                    <div className="absolute top-0 right-0 w-32 h-32 rounded-full filter blur-[80px] opacity-10 pointer-events-none" style={{ backgroundColor: activeColor }} />
-                    <div className="flex items-center justify-between mb-3">
-                      <div className={cn("flex items-center gap-2 px-2.5 py-1 rounded border text-[10px] uppercase font-mono tracking-wider", t.bgOpacity10, t.border20, t.text)}>
-                        <Zap size={10} fill="currentColor" /> 您的专属方案已生成
+                    <motion.div variants={itemTransition} className="flex flex-col gap-2">
+                      <div className="font-black text-[11px] uppercase tracking-widest flex items-center gap-1.5 text-black bg-black/5 self-start px-2.5 py-1 rounded-md border-2 border-black/10">
+                         <Zap size={14}/> 敏捷破局动作
                       </div>
-                      <button onClick={() => window.dispatchEvent(new CustomEvent('run-sim'))} className="px-3 py-1.5 bg-white text-black hover:bg-white/90 rounded text-[11px] font-medium transition-all active:scale-95 flex items-center gap-1.5">
-                        <Play size={10} fill="currentColor"/> 看看它是怎么运转的
-                      </button>
-                    </div>
-                    <h3 className="text-xl font-medium tracking-tight mb-3 text-white/95">{output.title}</h3>
-                    <p className="text-[12px] leading-relaxed text-white/60 mb-5">{output.scene}</p>
+                      <div className="p-4 rounded-[16px] h-full leading-[1.6] bg-[#111] text-[#fbfbfb] font-medium text-[13px] md:text-[14px] border-[3px] border-black shadow-[4px_4px_0_0_rgba(200,200,200,0.15)]">
+                        {output.process[currentStepIndex].action}
+                      </div>
+                    </motion.div>
+                  </div>
 
-                    {/* Mission Context */}
-                    <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-3 relative z-10">
-                      <h4 className={cn("text-[13px] font-mono flex items-center gap-2", t.text80)}><Target size={14} /> 任务简报 / Mission Brief</h4>
-                      <div className="text-[12px] text-white/80 whitespace-pre-wrap leading-[1.8] font-light">
-                        <TypewriterText text={output.mission_brief} delay={5} />
-                      </div>
-                    </div>
-                 </div>
-
-                 {/* Summary & Interview split */}
-                 <div className="flex-1 min-h-0 grid grid-cols-1 gap-4 overflow-y-auto pr-2 custom-scrollbar">
-                    {/* Mentor Feedback */}
-                    <div className="bg-[#ff4e00]/5 border border-[#ff4e00]/20 rounded-2xl p-4 group flex flex-col shrink-0 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-[#ff4e00] rounded-full filter blur-[50px] opacity-10 pointer-events-none" />
-                      <div className="flex justify-between items-center mb-3 pb-2 border-b border-[#ff4e00]/20 relative z-10">
-                        <h4 className="text-[12px] font-mono flex items-center gap-2 text-[#ff4e00]/90"><MessageSquare size={14} /> AI Mentor 反馈</h4>
-                      </div>
-                      <div className="text-[12px] text-[#ff4e00]/80 whitespace-pre-wrap leading-relaxed font-medium italic relative z-10 min-h-[40px]">
-                        <TypewriterText text={output.mentor_feedback} delay={10} />
-                      </div>
-                    </div>
-                 
-                    <div className="bg-black/60 border border-white/5 rounded-2xl p-5 group flex flex-col shrink-0">
-                      <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
-                        <h4 className={cn("text-[12px] font-mono flex items-center gap-2", t.text80)}><FileText size={14} /> Resume Bullet (STAR 结构化)</h4>
-                        <CopyBtn text={output.resume} t={t} />
-                      </div>
-                      <div className="text-[13px] text-white/80 whitespace-pre-wrap leading-[1.8] font-light font-mono min-h-[100px]">
-                        <TypewriterText text={output.resume} delay={15} />
+                  <motion.div variants={itemTransition} className="flex flex-col md:flex-row items-center justify-between p-4 rounded-[16px] gap-4 bg-green-50/50 border-[3px] border-green-200 mt-auto">
+                    <div className="flex-1 flex gap-3 items-center pr-2">
+                      <div className="w-6 h-6 shrink-0 rounded-full flex justify-center items-center bg-green-600 text-white shadow-[2px_2px_0_0_rgba(22,163,74,0.3)]"><Check size={14} strokeWidth={4}/></div>
+                      <div className="leading-[1.5] font-black text-green-950 text-[13px] md:text-[14px]">
+                        <span className="opacity-50 mr-2 text-[10px] uppercase tracking-widest">阶段成果</span>
+                        {output.process[currentStepIndex].result}
                       </div>
                     </div>
                     
-                    <div className="bg-black/60 border border-white/5 rounded-2xl p-5 group flex flex-col shrink-0">
-                      <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
-                        <h4 className={cn("text-[12px] font-mono flex items-center gap-2", t.text80)}><Briefcase size={14} /> LinkedIn 收获与分享</h4>
-                        <CopyBtn text={output.linkedin} t={t} />
-                      </div>
-                      <div className="text-[13px] text-white/80 whitespace-pre-wrap leading-[1.8] font-light min-h-[80px]">
-                        <TypewriterText text={output.linkedin} delay={20} />
-                      </div>
-                    </div>
-                 </div>
-               </div>
+                    <motion.button 
+                      whileHover={{ scale: 1.02, boxShadow: "2px 2px 0 0 rgba(0,0,0,1)" }}
+                      whileTap={{ scale: 0.98 }}
+                      {...bindHover} 
+                      onClick={() => currentStepIndex < output.process.length - 1 ? setCurrentStepIndex(p=>p+1) : setMissionStatus('completed')} 
+                      className="shrink-0 px-5 py-2.5 rounded-lg font-black text-[12px] uppercase tracking-widest transition-all bg-black text-white shadow-[2px_2px_0_0_rgba(0,0,0,0.6)] border-[3px] border-black flex items-center gap-2 group w-full md:w-auto justify-center"
+                    >
+                      {currentStepIndex < output.process.length - 1 ? '推进推演进度' : '完成复盘通关'}
+                      <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                    </motion.button>
+                  </motion.div>
 
-               {/* Right Panel: Architecture & Terminal */}
-               <div className="flex-[3] flex flex-col gap-4 min-h-0">
-                  <div className="bg-[#0A0A0B]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-5 flex flex-col shrink-0">
-                    <h5 className="text-[12px] font-mono text-white/60 uppercase mb-4 flex items-center gap-2"><Layers size={14}/> 项目落地流程指导</h5>
-                    <ul className="space-y-3">
-                      {output.process.map((step: string, i: number) => (
-                        <li key={i} className="flex gap-3 text-[12px] text-white/70 leading-relaxed items-start">
-                           <span className={cn("font-mono text-[10px] mt-0.5 px-1.5 rounded-sm bg-white/5", t.text80)}>{i+1}</span> 
-                           <span>{step}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  
-                  <div className="flex-1 min-h-[150px]">
-                    <TerminalSimulation activeNode={activeNode} />
-                  </div>
-               </div>
+                </motion.div>
+              </AnimatePresence>
+            </motion.div>
+          )}
 
-            </motion.section>
+          {/* STAGE 4: ASSETS COMPLETED */}
+          {(output && !isProcessing && missionStatus === 'completed') && (
+            <motion.div key="stage4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", damping: 25 }} className="flex-1 py-4 md:py-6 w-full max-w-5xl mx-auto">
+              <div className="text-center mb-8 relative">
+                 <motion.div animate={{ rotate: [10, -10, 10] }} transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }} className="mx-auto w-12 h-12 mb-4 flex justify-center items-center rounded-[14px] border-[3px] border-black bg-white shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-black">
+                   <Sparkles size={24} />
+                 </motion.div>
+                 <h2 className="text-2xl md:text-3xl font-black mb-2 uppercase tracking-tighter text-black"><ScrambleText text="演练完成，知识资产已萃取" /></h2>
+                 <p className="text-[13px] font-bold opacity-60">高含金量语料已为您生成完毕，可一键复用至求职或述职场景</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+                <motion.div whileHover={{ y: -2, boxShadow: "4px 4px 0 0 rgba(0,0,0,1)" }} className="p-6 flex flex-col rounded-[24px] group relative overflow-hidden bg-white border-[3px] border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-black transition-all">
+                  <div className="flex justify-between items-center mb-4 relative z-10">
+                    <h4 className="text-base font-black uppercase flex items-center gap-2"><FileText size={16}/> 简历亮点提炼</h4>
+                    <button {...bindHover} onClick={() => navigator.clipboard.writeText(output.resume)} className="w-8 h-8 flex justify-center items-center rounded-[8px] border-[2px] border-black hover:bg-black hover:text-white transition-all active:scale-95"><Copy size={14}/></button>
+                  </div>
+                  <div className="flex-1 text-[12px] md:text-[13px] leading-[1.8] whitespace-pre-wrap relative z-10 font-medium opacity-80">{output.resume}</div>
+                </motion.div>
+
+                <motion.div whileHover={{ y: -2, boxShadow: "4px 4px 0 0 rgba(0,0,0,1)" }} className="p-6 flex flex-col rounded-[24px] group relative overflow-hidden bg-white border-[3px] border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] text-black transition-all">
+                  <div className="flex justify-between items-center mb-4 relative z-10">
+                    <h4 className="text-base font-black uppercase flex items-center gap-2"><Activity size={16}/> 社媒动态经验</h4>
+                    <button {...bindHover} onClick={() => navigator.clipboard.writeText(output.linkedin)} className="w-8 h-8 flex justify-center items-center rounded-[8px] border-[2px] border-black hover:bg-black hover:text-white transition-all active:scale-95"><Copy size={14}/></button>
+                  </div>
+                  <div className="flex-1 text-[12px] md:text-[13px] leading-[1.8] whitespace-pre-wrap relative z-10 font-medium opacity-80">{output.linkedin}</div>
+                </motion.div>
+
+                <motion.div whileHover={{ y: -2, boxShadow: "4px 4px 0 0 rgba(0,0,0,1)" }} className="md:col-span-2 p-6 md:p-6 rounded-[24px] relative overflow-hidden bg-[#ff4e00] text-white shadow-[4px_4px_0_0_rgba(0,0,0,1)] border-[3px] border-black transition-all">
+                  <h4 className="text-base font-black uppercase flex items-center gap-2 mb-3 relative z-10"><MessageSquare size={16}/> 资深面试官 / 导师核心评价</h4>
+                  <div className="text-[13px] italic leading-[1.7] relative z-10 font-bold text-white max-w-4xl">"{output.mentor_feedback.replace(/\[.*?\]\n/, '')}"</div>
+                </motion.div>
+              </div>
+
+              <div className="flex justify-center pb-12">
+                <motion.button 
+                  whileHover={{ scale: 1.02, boxShadow: "4px 4px 0 0 rgba(0,0,0,1)" }}
+                  whileTap={{ scale: 0.98 }}
+                  {...bindHover} 
+                  onClick={() => { setOutput(null); setMissionStatus('idle'); setActiveNode(null); }} 
+                  className="px-8 py-3 rounded-lg font-black text-[13px] uppercase tracking-widest transition-all bg-black text-white hover:bg-black/90 border-[3px] border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)]"
+                >
+                  Return to Home
+                </motion.button>
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
-
     </div>
   );
 }
-
